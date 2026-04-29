@@ -15,8 +15,8 @@ import { Navigation } from "@/components/Navigation";
 // });
 
 export const metadata: Metadata = {
-  title: "Radal - Shared Expense Tracker",
-  description: "Track shared purchases and calculate balances easily.",
+  title: "Kos Rama Adit - Shared Expense Tracker",
+  description: "Buat nyatet pengeluaran kos bersama.",
 };
 
 export const viewport: Viewport = {
