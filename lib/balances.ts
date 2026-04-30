@@ -1,4 +1,5 @@
 import { supabase, User, Purchase, PurchaseSplit } from './supabase';
+import { getMonthBoundaries } from './timezone';
 
 export type UserBalance = {
   userId: string;
@@ -15,8 +16,7 @@ export async function calculateBalancesForMonth(month: number, year: number): Pr
   if (usersErr || !users) return null;
 
   // 2. Get purchases for the month
-  const startDate = new Date(year, month - 1, 1).toISOString();
-  const endDate = new Date(year, month, 0, 23, 59, 59, 999).toISOString();
+  const { start: startDate, end: endDate } = getMonthBoundaries(year, month);
 
   const { data: purchases, error: purError } = await supabase
     .from('radal_purchases')

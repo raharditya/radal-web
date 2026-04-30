@@ -1,18 +1,16 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
-import { supabase, Purchase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { getCurrentMonthInTZ, getMonthBoundaries } from '@/lib/timezone';
 import { format } from 'date-fns';
 import { Plus, ShoppingBag, Calendar } from 'lucide-react';
 
 export default async function PurchasesPage() {
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
-  const currentYear = currentDate.getFullYear();
-  const monthName = format(currentDate, 'MMMM yyyy');
+  const { year, month } = getCurrentMonthInTZ();
+  const monthName = format(new Date(year, month - 1), 'MMMM yyyy');
 
-  const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString();
-  const endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999).toISOString();
+  const { start: startDate, end: endDate } = getMonthBoundaries(year, month);
 
   const { data: purchases, error } = await supabase
     .from('radal_purchases')
