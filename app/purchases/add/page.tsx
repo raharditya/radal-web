@@ -17,6 +17,7 @@ export default function AddPurchasePage() {
   // Splits
   const [splitA, setSplitA] = useState('');
   const [splitB, setSplitB] = useState('');
+  const [showSplit, setShowSplit] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [fetchingUsers, setFetchingUsers] = useState(true);
@@ -39,6 +40,7 @@ export default function AddPurchasePage() {
   const splitBNum = parseInt(splitB.replace(/\D/g, '') || '0', 10);
 
   const isSplitValid = totalStrNum > 0 && splitANum + splitBNum === totalStrNum;
+  const canSave = Boolean(title && totalStrNum && paidBy && users.length > 0 && (!showSplit || isSplitValid));
 
   // Split equally helper
   const splitEqually = () => {
@@ -54,8 +56,13 @@ export default function AddPurchasePage() {
     e.preventDefault();
     setError(null);
 
-    if (!title || !totalStrNum || !paidBy || !isSplitValid || users.length !== 2) {
-      setError("Please fill all fields correctly. Splits must equal the total amount.");
+    if (!title || !totalStrNum || !paidBy || users.length === 0) {
+      setError('Please fill in the title, amount, and who paid.');
+      return;
+    }
+
+    if (showSplit && !isSplitValid) {
+      setError('If you add a split, the shares must equal the total amount.');
       return;
     }
 
@@ -75,30 +82,32 @@ export default function AddPurchasePage() {
 
       if (purchaseError) throw purchaseError;
 
-      // 2. Insert Splits
-      const splitsPayload = [
-        {
-          purchase_id: purchaseData.id,
-          user_id: users[0].id,
-          share_amount: splitANum
-        },
-        {
-          purchase_id: purchaseData.id,
-          user_id: users[1].id,
-          share_amount: splitBNum
-        }
-      ];
+      if (showSplit && users.length === 2) {
+        const splitsPayload = [
+          {
+            purchase_id: purchaseData.id,
+            user_id: users[0].id,
+            share_amount: splitANum
+          },
+          {
+            purchase_id: purchaseData.id,
+            user_id: users[1].id,
+            share_amount: splitBNum
+          }
+        ];
 
-      const { error: splitsError } = await supabase
-        .from('radal_purchase_splits')
-        .insert(splitsPayload);
+        const { error: splitsError } = await supabase
+          .from('radal_purchase_splits')
+          .insert(splitsPayload);
 
-      if (splitsError) throw splitsError;
+        if (splitsError) throw splitsError;
+      }
 
       router.push('/purchases');
       router.refresh(); // Refresh data on standard pages
-    } catch (err: any) {
-      setError(err.message || 'Failed to insert purchase. Please try again.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to insert purchase. Please try again.';
+      setError(message);
       setLoading(false);
     }
   };
@@ -116,9 +125,9 @@ export default function AddPurchasePage() {
         <div className="flex justify-center p-12">
           <Loader2 className="animate-spin text-blue-500" />
         </div>
-      ) : users.length !== 2 ? (
+      ) : users.length === 0 ? (
         <div className="p-4 bg-red-500/10 text-red-400 rounded-2xl border border-red-500/20 text-sm">
-          Please add exactly 2 users to the database using the SQL schema file.
+          Please add users to the database using the SQL schema file.
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -154,7 +163,8 @@ export default function AddPurchasePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1.5 ml-1">Paid By</label>
+              <label className="block text-sm font-medium text-slate-400 mb-1.5 ml-1">Paid by</label>
+              <p className="text-xs text-slate-500 mb-2 ml-1">For tracking who covered this — not a settlement.</p>
               <div className="grid grid-cols-2 gap-3">
                 {users.map(user => (
                   <button
@@ -174,60 +184,72 @@ export default function AddPurchasePage() {
             </div>
           </div>
 
-          <div className="pt-4 mt-2 border-t border-slate-800/50">
-            <div className="flex justify-between items-end mb-4">
-              <label className="block text-sm font-medium text-slate-400 ml-1">Split Amount</label>
+          {users.length === 2 && (
+            <div className="pt-4 mt-2 border-t border-slate-800/50">
               <button
                 type="button"
-                onClick={splitEqually}
-                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-full transition-colors"
-                disabled={!totalStrNum}
+                onClick={() => setShowSplit((open) => !open)}
+                className="w-full text-sm font-medium text-slate-300 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-2xl py-3 px-4 transition-colors"
               >
-                Split Equally
+                {showSplit ? 'Hide split' : 'Add optional split'}
               </button>
+
+              {showSplit && (
+                <div className="mt-4">
+                  <div className="flex justify-between items-end mb-4">
+                    <label className="block text-sm font-medium text-slate-400 ml-1">Split amount</label>
+                    <button
+                      type="button"
+                      onClick={splitEqually}
+                      className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-full transition-colors"
+                      disabled={!totalStrNum}
+                    >
+                      Split equally
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1 ml-1">{users[0].name}</label>
+                      <input
+                        type="number"
+                        value={splitA}
+                        onChange={e => setSplitA(e.target.value)}
+                        placeholder="0"
+                        className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1 ml-1">{users[1].name}</label>
+                      <input
+                        type="number"
+                        value={splitB}
+                        onChange={e => setSplitB(e.target.value)}
+                        placeholder="0"
+                        className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {totalStrNum > 0 && splitA && splitB && !isSplitValid && (
+                    <p className="text-red-400 text-xs mt-3 flex items-center justify-center bg-red-500/10 py-2 rounded-lg">
+                      Sum of splits ({splitANum + splitBNum}) must equal total ({totalStrNum})
+                    </p>
+                  )}
+
+                  {totalStrNum > 0 && isSplitValid && (
+                    <p className="text-emerald-400 text-xs mt-3 flex items-center justify-center bg-emerald-500/10 py-2 rounded-lg gap-1.5">
+                      <Check size={14} /> Splits match total amount
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1 ml-1">{users[0].name}</label>
-                <input
-                  type="number"
-                  required
-                  value={splitA}
-                  onChange={e => setSplitA(e.target.value)}
-                  placeholder="0"
-                  className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1 ml-1">{users[1].name}</label>
-                <input
-                  type="number"
-                  required
-                  value={splitB}
-                  onChange={e => setSplitB(e.target.value)}
-                  placeholder="0"
-                  className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm"
-                />
-              </div>
-            </div>
-
-            {totalStrNum > 0 && splitA && splitB && !isSplitValid && (
-              <p className="text-red-400 text-xs mt-3 flex items-center justify-center bg-red-500/10 py-2 rounded-lg">
-                Sum of splits ({splitANum + splitBNum}) must equal total ({totalStrNum})
-              </p>
-            )}
-
-            {totalStrNum > 0 && isSplitValid && (
-              <p className="text-emerald-400 text-xs mt-3 flex items-center justify-center bg-emerald-500/10 py-2 rounded-lg gap-1.5">
-                <Check size={14} /> Splits match total amount perfectly
-              </p>
-            )}
-          </div>
+          )}
 
           <button
             type="submit"
-            disabled={loading || !isSplitValid}
+            disabled={loading || !canSave}
             className="w-full bg-white hover:bg-slate-200 text-slate-950 font-semibold py-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex justify-center items-center gap-2 mt-8 shadow-xl shadow-white/5"
           >
             {loading ? <Loader2 size={20} className="animate-spin" /> : 'Save Purchase'}

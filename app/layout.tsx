@@ -15,7 +15,7 @@ import { Navigation } from "@/components/Navigation";
 // });
 
 export const metadata: Metadata = {
-  title: "Kos Rama Adit - Shared Expense Tracker",
+  title: "Kos Galang Adit - Shared Expense Tracker",
   description: "Buat nyatet pengeluaran kos bersama.",
 };
 

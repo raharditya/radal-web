@@ -18,3 +18,7 @@ export function getMonthBoundaries(year: number, month: number) {
   const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
   return { start: start.toISOString(), end: end.toISOString() };
 }
+
+export function getYearMonthInTZ(date: Date) {
+  return getCurrentMonthInTZ(date);
+}
