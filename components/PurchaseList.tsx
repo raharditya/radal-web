@@ -1,7 +1,8 @@
 import { formatRp } from '@/lib/format';
 import type { MonthPurchase } from '@/lib/spending';
 import { format } from 'date-fns';
-import { ShoppingBag } from 'lucide-react';
+import { Pencil, ShoppingBag } from 'lucide-react';
+import Link from 'next/link';
 
 export function PurchaseList({ purchases }: { purchases: MonthPurchase[] }) {
   if (purchases.length === 0) {
@@ -19,9 +20,10 @@ export function PurchaseList({ purchases }: { purchases: MonthPurchase[] }) {
   return (
     <div className="space-y-3">
       {purchases.map((purchase) => (
-        <div
+        <Link
           key={purchase.id}
-          className="glass-card rounded-2xl p-4 border border-slate-800/50 hover:bg-slate-800/20 transition-colors"
+          href={`/purchases/${purchase.id}/edit`}
+          className="block glass-card rounded-2xl p-4 border border-slate-800/50 hover:bg-slate-800/20 transition-colors"
         >
           <div className="flex justify-between items-start mb-2">
             <h3 className="font-semibold text-slate-200 text-lg leading-tight line-clamp-2">
@@ -35,9 +37,12 @@ export function PurchaseList({ purchases }: { purchases: MonthPurchase[] }) {
             <span className="bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full font-medium">
               Paid by {purchase.radal_users?.name || 'Unknown'}
             </span>
-            <span>{format(new Date(purchase.purchased_at), 'MMM d, h:mm a')}</span>
+            <span className="flex items-center gap-2">
+              {format(new Date(purchase.purchased_at), 'MMM d, h:mm a')}
+              <Pencil size={12} className="text-slate-500" />
+            </span>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );

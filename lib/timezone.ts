@@ -22,3 +22,10 @@ export function getMonthBoundaries(year: number, month: number) {
 export function getYearMonthInTZ(date: Date) {
   return getCurrentMonthInTZ(date);
 }
+
+export function getPurchaseReturnPath(purchasedAt: string) {
+  const current = getCurrentMonthInTZ();
+  const { year, month } = getYearMonthInTZ(new Date(purchasedAt));
+  const isCurrentMonth = year === current.year && month === current.month;
+  return isCurrentMonth ? '/purchases' : `/history/${year}/${month}`;
+}

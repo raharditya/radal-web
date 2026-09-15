@@ -1,4 +1,4 @@
-import { supabase, User, Purchase } from './supabase';
+import { supabase, User, Purchase, PurchaseSplit } from './supabase';
 import { getCurrentMonthInTZ, getMonthBoundaries, getYearMonthInTZ } from './timezone';
 
 export type PersonSpending = {
@@ -30,6 +30,29 @@ export type MonthHistoryItem = {
 export type MonthPurchase = Purchase & {
   radal_users: { name: string } | null;
 };
+
+export type PurchaseForEdit = Purchase & {
+  splits: PurchaseSplit[];
+};
+
+export async function getPurchaseForEdit(id: string): Promise<PurchaseForEdit | null> {
+  const { data: purchase, error } = await supabase
+    .from('radal_purchases')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error || !purchase) return null;
+
+  const { data: splits, error: splitsError } = await supabase
+    .from('radal_purchase_splits')
+    .select('*')
+    .eq('purchase_id', id);
+
+  if (splitsError) return null;
+
+  return { ...(purchase as Purchase), splits: (splits ?? []) as PurchaseSplit[] };
+}
 
 export async function getUsers(): Promise<User[] | null> {
   const { data, error } = await supabase.from('radal_users').select('*');
